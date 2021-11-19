@@ -455,7 +455,8 @@ class EdgeAligner(object):
 
     def __init__(
         self, reader, channel=0, max_shift=15, false_positive_ratio=0.01,
-        randomize=False, filter_sigma=0.0, do_make_thumbnail=True, verbose=False
+        randomize=False, filter_sigma=0.0, do_make_thumbnail=True, verbose=False,
+        permutations_multiplier=10,
     ):
         self.channel = channel
         self.reader = CachingReader(reader, self.channel)
@@ -468,6 +469,7 @@ class EdgeAligner(object):
         self.filter_sigma = filter_sigma
         self.do_make_thumbnail = do_make_thumbnail
         self._cache = {}
+        self.permutations_multiplier = permutations_multiplier
 
     neighbors_graph = neighbors_graph
 
@@ -503,7 +505,7 @@ class EdgeAligner(object):
             warn_data("Some neighboring tiles have zero overlap.")
 
     def compute_threshold(self):
-        # Compute error threshold for rejecting aligments. We generate a
+        # Compute error threshold for rejecting alignments. We generate a
         # distribution of error scores for many known non-overlapping image
         # regions and take a certain percentile as the maximum allowable error.
         # The percentile becomes our accepted false-positive ratio.
@@ -525,7 +527,10 @@ class EdgeAligner(object):
         # Reduce permutation count for small datasets -- there are fewer
         # possible truly distinct strips with fewer tiles. The calculation here
         # is just a heuristic, not rigorously derived.
-        n = 1000 if num_distant_pairs > 8 else (num_distant_pairs + 1) * 10
+        # n = 1000 if num_distant_pairs > 8 else (num_distant_pairs + 1) * 10
+        # n = 20 if num_distant_pairs > 8 else (num_distant_pairs + 1) * permutations_multiplier
+        # n = 20 if num_distant_pairs > 8 else (num_distant_pairs + 1) * permutations_multiplier
+        n = (num_distant_pairs + 1) * self.permutations_multiplier
         pairs = np.empty((n, 2), dtype=int)
         offsets = np.empty((n, 2), dtype=int)
         # Generate n random non-overlapping image strips. Strips are always
@@ -567,6 +572,7 @@ class EdgeAligner(object):
             offsets[i] = o1, o2
         errors = np.empty(n)
         for i, ((t1, t2), (offset1, offset2)) in enumerate(zip(pairs, offsets)):
+            #  todo this is where we could check if the error is staying the same and quit early
             if self.verbose and (i % 10 == 9 or i == n - 1):
                 sys.stdout.write(
                     '\r    quantifying alignment error %d/%d' % (i + 1, n)

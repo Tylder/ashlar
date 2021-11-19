@@ -1,4 +1,5 @@
-FROM ubuntu:19.10
+#FROM ubuntu:19.10
+FROM ubuntu:18.04
 
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -23,10 +24,10 @@ RUN pip3 install -q -U \
 COPY / /app/ashlar/
 RUN pip3 install /app/ashlar
 
-ENV OMP_NUM_THREADS 1
+ENV OMP_NUM_THREADS 4
 
-VOLUME /data
-VOLUME /data2
-VOLUME /data3
+#VOLUME /data
+#VOLUME /data2
+#VOLUME /data3
 
-WORKDIR /data
+#WORKDIR /data
